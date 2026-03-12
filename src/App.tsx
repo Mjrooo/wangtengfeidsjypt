@@ -78,9 +78,24 @@ const Badge = ({ children, variant = 'default' }: { children: React.ReactNode; v
     warning: "bg-amber-100 text-amber-600",
     error: "bg-rose-100 text-rose-600",
   };
+  
+  const statusMap: Record<string, { label: string; variant: keyof typeof variants }> = {
+    'pending': { label: '待处理', variant: 'warning' },
+    'paid': { label: '已支付', variant: 'success' },
+    'shipped': { label: '已发货', variant: 'success' },
+    'completed': { label: '已完成', variant: 'success' },
+    'cancelled': { label: '已取消', variant: 'error' },
+    'refunded': { label: '已退款', variant: 'error' },
+    'assigned': { label: '已分配', variant: 'warning' },
+  };
+
+  const status = typeof children === 'string' ? statusMap[children.toLowerCase()] : null;
+  const label = status ? status.label : children;
+  const activeVariant = status ? status.variant : variant;
+
   return (
-    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider", variants[variant])}>
-      {children}
+    <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider", variants[activeVariant])}>
+      {label}
     </span>
   );
 };
@@ -302,7 +317,7 @@ export default function App() {
                   </button>
                 </div>
                 <div className="space-y-3">
-                  {orders.slice(0, 3).map((order) => (
+                  {orders.slice(0, 5).map((order) => (
                     <Card key={order.id} className="p-3 flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400">

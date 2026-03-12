@@ -82,9 +82,67 @@ if (productCount.count === 0) {
     { name: "新鲜有机西红柿", price: 12.5, stock: 100, category: "蔬菜", isDistribution: 0 },
     { name: "高山红富士苹果", price: 25.0, stock: 50, category: "水果", isDistribution: 1 },
     { name: "五常大米 5kg", price: 88.0, stock: 30, category: "粮油", isDistribution: 0 },
+    { name: "鲁花花生油 5L", price: 158.0, stock: 20, category: "粮油", isDistribution: 1 },
+    { name: "特仑苏牛奶 250ml*12", price: 65.0, stock: 40, category: "饮品", isDistribution: 0 },
+    { name: "进口车厘子 500g", price: 45.0, stock: 15, category: "水果", isDistribution: 1 },
   ];
   const insertProd = db.prepare("INSERT INTO products (name, price, stock, category, isDistribution) VALUES (?, ?, ?, ?, ?)");
   seedProducts.forEach(p => insertProd.run(p.name, p.price, p.stock, p.category, p.isDistribution));
+}
+
+const orderCount = db.prepare("SELECT count(*) as count FROM orders").get() as { count: number };
+if (orderCount.count === 0) {
+  const now = new Date();
+  const insertOrder = db.prepare(`
+    INSERT INTO orders (orderNumber, productId, productName, quantity, totalAmount, status, customerName, customerPhone, customerAddress, createdAt) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  for (let i = 0; i < 15; i++) {
+    const date = new Date(now);
+    date.setDate(now.getDate() - Math.floor(i / 2)); // 2 orders per day roughly
+    const status = i === 0 ? 'pending' : i < 5 ? 'paid' : 'completed';
+    const prodId = (i % 6) + 1;
+    const names = ["张三", "李四", "王五", "赵六", "钱七"];
+    const addresses = ["1号楼101", "3号楼502", "8号楼203", "12号楼1101", "5号楼404"];
+    
+    insertOrder.run(
+      "ORD" + (Date.now() - i * 1000000),
+      prodId,
+      "种子产品 " + prodId, // Will be updated by join or just use static for seed
+      1 + (i % 3),
+      (20 + i * 10).toFixed(2),
+      status,
+      names[i % 5],
+      "1380013800" + (i % 10),
+      "幸福社区" + addresses[i % 5],
+      date.toISOString()
+    );
+  }
+  // Fix product names in orders for better display
+  db.exec("UPDATE orders SET productName = (SELECT name FROM products WHERE products.id = orders.productId)");
+}
+
+const serviceCount = db.prepare("SELECT count(*) as count FROM service_requests").get() as { count: number };
+if (serviceCount.count === 0) {
+  const insertService = db.prepare(`
+    INSERT INTO service_requests (type, title, description, status, customerName, customerPhone, address, createdAt) 
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+  
+  const services = [
+    { type: 'errand', title: '代买感冒药', desc: '急需感冒灵和布洛芬，送至2号楼', status: 'pending' },
+    { type: 'housekeeping', title: '深度保洁', desc: '三室两厅深度保洁，约周六上午', status: 'assigned' },
+    { type: 'repair', title: '水龙头漏水', desc: '厨房水龙头不停滴水，需要更换', status: 'completed' },
+    { type: 'errand', title: '取快递', desc: '菜鸟驿站有三个大件，搬不动', status: 'pending' },
+    { type: 'housekeeping', title: '油烟机清洗', desc: '一年没洗了，油垢比较多', status: 'completed' },
+  ];
+
+  services.forEach((s, i) => {
+    const date = new Date();
+    date.setHours(date.getHours() - i * 4);
+    insertService.run(s.type, s.title, s.desc, s.status, "业主" + (i + 1), "1390013900" + i, "幸福社区" + (i + 1) + "号楼", date.toISOString());
+  });
 }
 
 async function startServer() {
