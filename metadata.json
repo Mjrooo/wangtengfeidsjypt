@@ -1,0 +1,7 @@
+{
+  "name": "社区电商与服务平台",
+  "description": "一个便捷、高效的社区服务平台，涵盖直营店管理、订单处理、产品分销、数据统计及跑腿家政等增值服务。",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
