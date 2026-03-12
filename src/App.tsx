@@ -100,16 +100,67 @@ const Badge = ({ children, variant = 'default' }: { children: React.ReactNode; v
   );
 };
 
+// --- Mock Data ---
+
+const MOCK_STORE: StoreInfo = {
+  id: 1,
+  name: "社区生活直营店",
+  contact: "张经理",
+  phone: "13800138000",
+  email: "store@example.com",
+  photos: ["https://picsum.photos/seed/store/400/300"],
+  features: "新鲜直供, 极速配送, 24h售后",
+  notices: "今日西红柿特价, 欢迎选购"
+};
+
+const MOCK_PRODUCTS: Product[] = [
+  { id: 1, name: "新鲜有机西红柿", price: 12.5, stock: 100, category: "蔬菜", isDistribution: false },
+  { id: 2, name: "高山红富士苹果", price: 25.0, stock: 50, category: "水果", isDistribution: true },
+  { id: 3, name: "五常大米 5kg", price: 88.0, stock: 30, category: "粮油", isDistribution: false },
+  { id: 4, name: "鲁花花生油 5L", price: 158.0, stock: 20, category: "粮油", isDistribution: true },
+  { id: 5, name: "特仑苏牛奶 250ml*12", price: 65.0, stock: 40, category: "饮品", isDistribution: false },
+  { id: 6, name: "进口车厘子 500g", price: 45.0, stock: 15, category: "水果", isDistribution: true },
+];
+
+const MOCK_ORDERS: Order[] = Array.from({ length: 15 }).map((_, i) => ({
+  id: i + 1,
+  orderNumber: `ORD${Date.now() - i * 1000000}`,
+  productId: (i % 6) + 1,
+  productName: MOCK_PRODUCTS[i % 6].name,
+  quantity: 1 + (i % 3),
+  totalAmount: (MOCK_PRODUCTS[i % 6].price * (1 + (i % 3))),
+  status: i === 0 ? 'pending' : i < 5 ? 'paid' : 'completed',
+  customerName: ["张三", "李四", "王五", "赵六", "钱七"][i % 5],
+  customerPhone: `1380013800${i % 10}`,
+  customerAddress: `幸福社区${[1, 3, 8, 12, 5][i % 5]}号楼${[101, 502, 203, 1101, 404][i % 5]}`,
+  createdAt: new Date(Date.now() - i * 3600000 * 12).toISOString(),
+}));
+
+const MOCK_SERVICES: ServiceRequest[] = [
+  { id: 1, type: 'errand', title: '代买感冒药', description: '急需感冒灵和布洛芬，送至2号楼', status: 'pending', customerName: '业主1', customerPhone: '13900139001', address: '幸福社区1号楼', createdAt: new Date().toISOString() },
+  { id: 2, type: 'housekeeping', title: '深度保洁', description: '三室两厅深度保洁，约周六上午', status: 'assigned', customerName: '业主2', customerPhone: '13900139002', address: '幸福社区2号楼', createdAt: new Date(Date.now() - 3600000 * 4).toISOString() },
+  { id: 3, type: 'repair', title: '水龙头漏水', description: '厨房水龙头不停滴水，需要更换', status: 'completed', customerName: '业主3', customerPhone: '13900139003', address: '幸福社区3号楼', createdAt: new Date(Date.now() - 3600000 * 8).toISOString() },
+  { id: 4, type: 'errand', title: '取快递', description: '菜鸟驿站有三个大件，搬不动', status: 'pending', customerName: '业主4', customerPhone: '13900139004', address: '幸福社区4号楼', createdAt: new Date(Date.now() - 3600000 * 12).toISOString() },
+  { id: 5, type: 'housekeeping', title: '油烟机清洗', description: '一年没洗了，油垢比较多', status: 'completed', customerName: '业主5', customerPhone: '13900139005', address: '幸福社区5号楼', createdAt: new Date(Date.now() - 3600000 * 16).toISOString() },
+];
+
+const MOCK_STATS = {
+  salesByDay: Array.from({ length: 7 }).map((_, i) => ({
+    date: new Date(Date.now() - (6 - i) * 86400000).toISOString().split('T')[0],
+    total: 500 + Math.floor(Math.random() * 1000)
+  }))
+};
+
 // --- Main App ---
 
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
-  const [store, setStore] = useState<StoreInfo | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [services, setServices] = useState<ServiceRequest[]>([]);
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [store, setStore] = useState<StoreInfo | null>(MOCK_STORE);
+  const [products, setProducts] = useState<Product[]>(MOCK_PRODUCTS);
+  const [orders, setOrders] = useState<Order[]>(MOCK_ORDERS);
+  const [services, setServices] = useState<ServiceRequest[]>(MOCK_SERVICES);
+  const [stats, setStats] = useState<any>(MOCK_STATS);
+  const [loading, setLoading] = useState(false);
 
   // Modal states
   const [showOrderModal, setShowOrderModal] = useState(false);
@@ -117,101 +168,64 @@ export default function App() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showStoreSettings, setShowStoreSettings] = useState(false);
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const [storeRes, prodRes, orderRes, servRes, statRes] = await Promise.all([
-        fetch('/api/store'),
-        fetch('/api/products'),
-        fetch('/api/orders'),
-        fetch('/api/services'),
-        fetch('/api/stats')
-      ]);
-      
-      setStore(await storeRes.json());
-      setProducts(await prodRes.json());
-      setOrders(await orderRes.json());
-      setServices(await servRes.json());
-      setStats(await statRes.json());
-    } catch (error) {
-      console.error("Failed to fetch data", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateOrder = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateOrder = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
     const productId = Number(formData.get('productId'));
     const product = products.find(p => p.id === productId);
     
-    const orderData = {
+    const newOrder: Order = {
+      id: orders.length + 1,
+      orderNumber: "ORD" + Date.now(),
       productId,
       productName: product?.name || '未知产品',
       quantity: Number(formData.get('quantity')),
       totalAmount: (product?.price || 0) * Number(formData.get('quantity')),
-      customerName: formData.get('customerName'),
-      customerPhone: formData.get('customerPhone'),
-      customerAddress: formData.get('customerAddress'),
+      status: 'pending',
+      customerName: formData.get('customerName') as string,
+      customerPhone: formData.get('customerPhone') as string,
+      customerAddress: formData.get('customerAddress') as string,
+      createdAt: new Date().toISOString(),
     };
 
-    await fetch('/api/orders', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(orderData)
-    });
-    
+    setOrders([newOrder, ...orders]);
     setShowOrderModal(false);
-    fetchData();
   };
 
-  const handleCreateService = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleCreateService = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const serviceData = {
-      type: formData.get('type'),
-      title: formData.get('title'),
-      description: formData.get('description'),
-      customerName: formData.get('customerName'),
-      customerPhone: formData.get('customerPhone'),
-      address: formData.get('address'),
+    const newService: ServiceRequest = {
+      id: services.length + 1,
+      type: formData.get('type') as any,
+      title: formData.get('title') as string,
+      description: formData.get('description') as string,
+      status: 'pending',
+      customerName: formData.get('customerName') as string,
+      customerPhone: formData.get('customerPhone') as string,
+      address: formData.get('address') as string,
+      createdAt: new Date().toISOString(),
     };
 
-    await fetch('/api/services', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(serviceData)
-    });
-    
+    setServices([newService, ...services]);
     setShowServiceModal(false);
-    fetchData();
   };
 
-  const handleUpdateStore = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleUpdateStore = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
-    const storeData = {
-      name: formData.get('name'),
-      contact: formData.get('contact'),
-      phone: formData.get('phone'),
-      email: formData.get('email'),
-      features: formData.get('features'),
-      notices: formData.get('notices'),
+    const updatedStore: StoreInfo = {
+      ...store!,
+      name: formData.get('name') as string,
+      contact: formData.get('contact') as string,
+      phone: formData.get('phone') as string,
+      email: formData.get('email') as string,
+      features: formData.get('features') as string,
+      notices: formData.get('notices') as string,
     };
 
-    await fetch('/api/store', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(storeData)
-    });
-    
+    setStore(updatedStore);
     setShowStoreSettings(false);
-    fetchData();
   };
 
   if (loading) {
